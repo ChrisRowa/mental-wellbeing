@@ -1,0 +1,261 @@
+import { useState, useRef, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Brain, Send, Heart, Lightbulb, Calendar, ArrowLeft } from "lucide-react";
+import { Link } from "react-router-dom";
+import { useUser } from "@/context/UserContext";
+
+interface Message {
+  id: number;
+  text: string;
+  sender: 'user' | 'ai';
+  timestamp: Date;
+  suggestions?: string[];
+}
+
+const Chat = () => {
+  const { user } = useUser();
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: 1,
+      text: "Hello! I'm your AI wellness companion. I'm here to provide emotional support, coping strategies, and wellness guidance. How are you feeling today?",
+      sender: 'ai',
+      timestamp: new Date(),
+      suggestions: ["I'm feeling anxious", "I need motivation", "Help me relax", "I want to talk about stress"]
+    }
+  ]);
+  const [inputText, setInputText] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(scrollToBottom, [messages]);
+
+  const handleSendMessage = async (text: string) => {
+    if (!text.trim()) return;
+
+    const userMessage: Message = {
+      id: messages.length + 1,
+      text: text.trim(),
+      sender: 'user',
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInputText("");
+    setIsTyping(true);
+
+    // Simulate AI response
+    setTimeout(() => {
+      const aiResponse = generateAIResponse(text.trim());
+      const aiMessage: Message = {
+        id: messages.length + 2,
+        text: aiResponse.text,
+        sender: 'ai',
+        timestamp: new Date(),
+        suggestions: aiResponse.suggestions
+      };
+      
+      setMessages(prev => [...prev, aiMessage]);
+      setIsTyping(false);
+    }, 1500);
+  };
+
+  const generateAIResponse = (userInput: string) => {
+    const lowerInput = userInput.toLowerCase();
+    
+    if (lowerInput.includes('anxious') || lowerInput.includes('anxiety')) {
+      return {
+        text: "I understand you're feeling anxious. That's completely valid. Try this breathing exercise: Breathe in for 4 counts, hold for 4, exhale for 6. Remember, anxiety is temporary and you have the strength to work through it. Would you like to explore what might be triggering these feelings?",
+        suggestions: ["Tell me more about breathing exercises", "What triggers my anxiety?", "Book a session with a therapist", "I need more coping strategies"]
+      };
+    } else if (lowerInput.includes('stress') || lowerInput.includes('stressed')) {
+      return {
+        text: "Stress can feel overwhelming, but you're taking a positive step by reaching out. Let's break this down: What's the main source of your stress right now? Sometimes naming it can help reduce its power over us.",
+        suggestions: ["Work is stressing me out", "I'm stressed about relationships", "Financial worries", "I need stress management tips"]
+      };
+    } else if (lowerInput.includes('sad') || lowerInput.includes('depressed') || lowerInput.includes('down')) {
+      return {
+        text: "I hear that you're going through a difficult time. Your feelings are valid, and it's okay to not be okay sometimes. You don't have to face this alone. Small steps forward count - even reaching out today shows your strength. What usually helps lift your spirits, even a little?",
+        suggestions: ["I feel hopeless", "Nothing seems to help", "Connect me with a therapist", "What are some mood-lifting activities?"]
+      };
+    } else if (lowerInput.includes('motivation') || lowerInput.includes('motivated')) {
+      return {
+        text: "Finding motivation can be challenging, especially when we're struggling. Remember that motivation often follows action, not the other way around. What's one small thing you could do today that would make you feel slightly better about yourself?",
+        suggestions: ["I lack energy for anything", "Help me set small goals", "I need daily motivation", "What's a good starting point?"]
+      };
+    } else if (lowerInput.includes('sleep') || lowerInput.includes('tired')) {
+      return {
+        text: "Sleep is crucial for mental wellness. Poor sleep can affect our mood, thinking, and overall health. Are you having trouble falling asleep, staying asleep, or waking up too early? Let's explore some strategies that might help improve your sleep quality.",
+        suggestions: ["I can't fall asleep", "I wake up frequently", "I'm always tired", "Share sleep hygiene tips"]
+      };
+    } else {
+      return {
+        text: "Thank you for sharing that with me. I'm here to listen and support you. Everyone's journey is unique, and what you're experiencing matters. Is there something specific you'd like to talk about or explore together?",
+        suggestions: ["I'm feeling overwhelmed", "I need coping strategies", "Help me understand my emotions", "I want to book a therapy session"]
+      };
+    }
+  };
+
+  const handleSuggestionClick = (suggestion: string) => {
+    handleSendMessage(suggestion);
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      {/* Header */}
+      <header className="border-b border-white/20 backdrop-blur-sm bg-white/80 sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-4 flex items-center space-x-4">
+          <Link to="/dashboard">
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+          </Link>
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center">
+              <Brain className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="font-semibold">AI Wellness Assistant</h1>
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="text-sm text-gray-600">Online & ready to help</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div className="container mx-auto px-4 py-4 max-w-4xl">
+        <div className="flex flex-col h-[calc(100vh-200px)]">
+          {/* Chat Messages */}
+          <Card className="flex-1 border-0 shadow-lg bg-white/80 backdrop-blur-sm mb-4 overflow-hidden">
+            <CardContent className="p-0 h-full flex flex-col">
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                {messages.map((message) => (
+                  <div key={message.id} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`flex space-x-3 max-w-[80%] ${message.sender === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                      <Avatar className="w-8 h-8 flex-shrink-0">
+                        {message.sender === 'ai' ? (
+                          <div className="w-full h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center">
+                            <Brain className="h-4 w-4 text-white" />
+                          </div>
+                        ) : (
+                          <AvatarFallback className="bg-indigo-100 text-indigo-700">{user?.name?.split(' ')[0] || "You"}</AvatarFallback>
+                        )}
+                      </Avatar>
+                      <div className="space-y-2">
+                        <div className={`p-4 rounded-2xl ${
+                          message.sender === 'user' 
+                            ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white' 
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          <p className="text-sm leading-relaxed">{message.text}</p>
+                        </div>
+                        {message.suggestions && (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {message.suggestions.map((suggestion, index) => (
+                              <Button
+                                key={index}
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleSuggestionClick(suggestion)}
+                                className="text-xs bg-white/50 hover:bg-indigo-50 border-indigo-200"
+                              >
+                                {suggestion}
+                              </Button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                
+                {isTyping && (
+                  <div className="flex justify-start">
+                    <div className="flex space-x-3 max-w-[80%]">
+                      <Avatar className="w-8 h-8">
+                        <div className="w-full h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center">
+                          <Brain className="h-4 w-4 text-white" />
+                        </div>
+                      </Avatar>
+                      <div className="bg-gray-100 p-4 rounded-2xl">
+                        <div className="flex space-x-1">
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Input Area */}
+          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+            <CardContent className="p-4">
+              <div className="flex space-x-3">
+                <Input
+                  placeholder="Type your message here... I'm here to listen and support you."
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(inputText)}
+                  className="flex-1 bg-white/50"
+                  disabled={isTyping}
+                />
+                <Button 
+                  onClick={() => handleSendMessage(inputText)}
+                  disabled={!inputText.trim() || isTyping}
+                  className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              {/* Quick Actions */}
+              <div className="flex flex-wrap gap-2 mt-3">
+                <Badge 
+                  variant="secondary" 
+                  className="cursor-pointer hover:bg-indigo-100 bg-white/70"
+                  onClick={() => handleSendMessage("I need someone to talk to")}
+                >
+                  <Heart className="w-3 h-3 mr-1" />
+                  Need to talk
+                </Badge>
+                <Badge 
+                  variant="secondary" 
+                  className="cursor-pointer hover:bg-indigo-100 bg-white/70"
+                  onClick={() => handleSendMessage("Give me a wellness tip")}
+                >
+                  <Lightbulb className="w-3 h-3 mr-1" />
+                  Wellness tip
+                </Badge>
+                <Badge 
+                  variant="secondary" 
+                  className="cursor-pointer hover:bg-indigo-100 bg-white/70"
+                  onClick={() => handleSendMessage("I want to book a therapy session")}
+                >
+                  <Calendar className="w-3 h-3 mr-1" />
+                  Book session
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Chat;
