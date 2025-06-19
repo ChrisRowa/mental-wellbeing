@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios from "@/lib/axios";
 import { useEffect, useState } from "react";
 import { useUser } from "@/context/UserContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,30 +6,51 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Calendar, MessageCircle, Users, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Input } from "@/components/ui/input";
 
 const TherapistDashboard = () => {
   const { user } = useUser();
   const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<any>({});
+  const [slots, setSlots] = useState<string>("");
   const [appointments, setAppointments] = useState<any[]>([]);
-  const [slots, setSlots] = useState<string[]>([]);
+  const [messages, setMessages] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [profileRes, apptRes] = await Promise.all([
+        const [profileRes, appointmentsRes, messagesRes] = await Promise.all([
           axios.get("/api/therapists/profile"),
-          axios.get("/api/therapists/appointments")
+          axios.get("/api/therapists/appointments"),
+          axios.get("/api/therapists/messages")
         ]);
         setProfile(profileRes.data);
-        setAppointments(apptRes.data.appointments || []);
-        setSlots(profileRes.data.availability || []);
+        setSlots(profileRes.data.availability || "");
+        setAppointments(appointmentsRes.data.appointments || []);
+        setMessages(messagesRes.data.messages || []);
       } catch (err) {}
       setLoading(false);
     };
     fetchData();
   }, []);
+
+  const handleProfileUpdate = async () => {
+    await axios.put("/api/therapists/profile", profile);
+    alert("Profile updated!");
+  };
+  const handleSlotsUpdate = async () => {
+    await axios.put("/api/therapists/slots", { slots });
+    alert("Slots updated!");
+  };
+  const handleAccept = async (id: string) => {
+    await axios.post("/api/therapists/accept", { appointmentId: id });
+    setAppointments(appointments.filter(a => a._id !== id));
+  };
+  const handleReject = async (id: string) => {
+    await axios.post("/api/therapists/reject", { appointmentId: id });
+    setAppointments(appointments.filter(a => a._id !== id));
+  };
 
   if (loading) return <div>Loading...</div>;
 
@@ -54,69 +75,70 @@ const TherapistDashboard = () => {
       </header>
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-4">Welcome, {profile?.name?.split(' ')[0] || user?.name?.split(' ')[0] || "Therapist"}</h1>
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Profile & Specialization</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center space-x-4">
-              <Avatar className="h-16 w-16">
-                <AvatarImage src={profile?.avatar || "/placeholder.svg"} />
-                <AvatarFallback>TD</AvatarFallback>
-              </Avatar>
-              <div>
-                <div className="font-semibold">{profile?.name || user?.name || "Therapist"}</div>
-                <div className="text-gray-600">{profile?.email || user?.email || "therapist@example.com"}</div>
-                <div className="mt-2">
-                  {profile?.specialization?.map((spec, i) => (
-                    <span key={i} className="inline-block bg-indigo-100 text-indigo-700 px-2 py-1 rounded mr-2 text-xs">{spec}</span>
-                  ))}
+        <div className="grid md:grid-cols-2 gap-8">
+          {/* Profile Management */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Profile</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Input value={profile.name || ""} onChange={e => setProfile({ ...profile, name: e.target.value })} placeholder="Name" className="mb-2" />
+              <Input value={profile.specialization || ""} onChange={e => setProfile({ ...profile, specialization: e.target.value })} placeholder="Specialization" className="mb-2" />
+              <Input value={profile.bio || ""} onChange={e => setProfile({ ...profile, bio: e.target.value })} placeholder="Bio" className="mb-2" />
+              <Button onClick={handleProfileUpdate}>Update Profile</Button>
+            </CardContent>
+          </Card>
+          {/* Slot Management */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Available Slots</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Input value={slots} onChange={e => setSlots(e.target.value)} placeholder="e.g. Mon 2-4pm, Tue 10-12am" className="mb-2" />
+              <Button onClick={handleSlotsUpdate}>Update Slots</Button>
+            </CardContent>
+          </Card>
+        </div>
+        {/* Appointments */}
+        <div className="mt-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>Pending Appointments</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {appointments.length === 0 && <div>No pending appointments.</div>}
+              {appointments.map(a => (
+                <div key={a._id} className="flex items-center justify-between mb-2">
+                  <div>
+                    <div className="font-semibold">{a.userName || "User"}</div>
+                    <div className="text-sm">{a.date} {a.time}</div>
+                  </div>
+                  <div className="space-x-2">
+                    <Button size="sm" onClick={() => handleAccept(a._id)}>Accept</Button>
+                    <Button size="sm" variant="destructive" onClick={() => handleReject(a._id)}>Reject</Button>
+                  </div>
                 </div>
-              </div>
-            </div>
-            {/* TODO: Add edit profile functionality */}
-          </CardContent>
-        </Card>
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Available Time Slots</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="mb-2">
-              {slots.map((slot, i) => (
-                <li key={i} className="text-gray-700">{slot}</li>
               ))}
-            </ul>
-            <Button size="sm">Edit Slots</Button>
-            {/* TODO: Implement slot management */}
-          </CardContent>
-        </Card>
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Appointments</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul>
-              {appointments.map((appt) => (
-                <li key={appt.id} className="flex items-center justify-between py-2 border-b last:border-b-0">
-                  <span>{appt.user} - {appt.date}</span>
-                  <span className="capitalize text-xs px-2 py-1 rounded bg-indigo-100 text-indigo-700 ml-2">{appt.status}</span>
-                  <Button size="sm" variant="outline">View</Button>
-                  {/* TODO: Accept/Reject logic */}
-                </li>
+            </CardContent>
+          </Card>
+        </div>
+        {/* Messages (AI-to-human handover) */}
+        <div className="mt-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>Messages (AI-to-Human Handover)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {messages.length === 0 && <div>No messages.</div>}
+              {messages.map(m => (
+                <div key={m._id} className="mb-2">
+                  <div className="font-semibold">{m.userName || "User"}</div>
+                  <div className="text-sm">{m.message}</div>
+                </div>
               ))}
-            </ul>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Messages</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p>View and respond to user messages here.</p>
-            {/* TODO: Implement message viewing and AI handover */}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

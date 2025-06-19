@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Brain, Eye, EyeOff } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
+import axios from "@/lib/axios";
 import { useUser } from "@/context/UserContext";
 
 const Login = () => {
@@ -21,6 +21,9 @@ const Login = () => {
       const res = await axios.post("/api/auth/login", { email, password });
       const { name, email: userEmail, role } = res.data.user;
       setUser({ name, email: userEmail, role });
+      if (res.data.token) {
+        localStorage.setItem('token', res.data.token);
+      }
       if (role === "therapist") navigate("/therapist-dashboard");
       else if (role === "admin") navigate("/admin-dashboard");
       else navigate("/dashboard");

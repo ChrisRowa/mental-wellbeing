@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Brain, Send, Heart, Lightbulb, Calendar, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useUser } from "@/context/UserContext";
+import axios from "@/lib/axios";
 
 interface Message {
   id: number;
@@ -51,56 +52,26 @@ const Chat = () => {
     setInputText("");
     setIsTyping(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const aiResponse = generateAIResponse(text.trim());
+    try {
+      const res = await axios.post("/api/chat/send", { message: text.trim() });
+      const aiReply = res.data.reply;
       const aiMessage: Message = {
         id: messages.length + 2,
-        text: aiResponse.text,
+        text: aiReply,
         sender: 'ai',
         timestamp: new Date(),
-        suggestions: aiResponse.suggestions
+        suggestions: undefined // Optionally parse suggestions from aiReply if you want
       };
-      
       setMessages(prev => [...prev, aiMessage]);
-      setIsTyping(false);
-    }, 1500);
-  };
-
-  const generateAIResponse = (userInput: string) => {
-    const lowerInput = userInput.toLowerCase();
-    
-    if (lowerInput.includes('anxious') || lowerInput.includes('anxiety')) {
-      return {
-        text: "I understand you're feeling anxious. That's completely valid. Try this breathing exercise: Breathe in for 4 counts, hold for 4, exhale for 6. Remember, anxiety is temporary and you have the strength to work through it. Would you like to explore what might be triggering these feelings?",
-        suggestions: ["Tell me more about breathing exercises", "What triggers my anxiety?", "Book a session with a therapist", "I need more coping strategies"]
-      };
-    } else if (lowerInput.includes('stress') || lowerInput.includes('stressed')) {
-      return {
-        text: "Stress can feel overwhelming, but you're taking a positive step by reaching out. Let's break this down: What's the main source of your stress right now? Sometimes naming it can help reduce its power over us.",
-        suggestions: ["Work is stressing me out", "I'm stressed about relationships", "Financial worries", "I need stress management tips"]
-      };
-    } else if (lowerInput.includes('sad') || lowerInput.includes('depressed') || lowerInput.includes('down')) {
-      return {
-        text: "I hear that you're going through a difficult time. Your feelings are valid, and it's okay to not be okay sometimes. You don't have to face this alone. Small steps forward count - even reaching out today shows your strength. What usually helps lift your spirits, even a little?",
-        suggestions: ["I feel hopeless", "Nothing seems to help", "Connect me with a therapist", "What are some mood-lifting activities?"]
-      };
-    } else if (lowerInput.includes('motivation') || lowerInput.includes('motivated')) {
-      return {
-        text: "Finding motivation can be challenging, especially when we're struggling. Remember that motivation often follows action, not the other way around. What's one small thing you could do today that would make you feel slightly better about yourself?",
-        suggestions: ["I lack energy for anything", "Help me set small goals", "I need daily motivation", "What's a good starting point?"]
-      };
-    } else if (lowerInput.includes('sleep') || lowerInput.includes('tired')) {
-      return {
-        text: "Sleep is crucial for mental wellness. Poor sleep can affect our mood, thinking, and overall health. Are you having trouble falling asleep, staying asleep, or waking up too early? Let's explore some strategies that might help improve your sleep quality.",
-        suggestions: ["I can't fall asleep", "I wake up frequently", "I'm always tired", "Share sleep hygiene tips"]
-      };
-    } else {
-      return {
-        text: "Thank you for sharing that with me. I'm here to listen and support you. Everyone's journey is unique, and what you're experiencing matters. Is there something specific you'd like to talk about or explore together?",
-        suggestions: ["I'm feeling overwhelmed", "I need coping strategies", "Help me understand my emotions", "I want to book a therapy session"]
-      };
+    } catch (err) {
+      setMessages(prev => [...prev, {
+        id: messages.length + 2,
+        text: "Sorry, I couldn't connect to the AI assistant. Please try again later.",
+        sender: 'ai',
+        timestamp: new Date()
+      }]);
     }
+    setIsTyping(false);
   };
 
   const handleSuggestionClick = (suggestion: string) => {
@@ -159,6 +130,13 @@ const Chat = () => {
                         }`}>
                           <p className="text-sm leading-relaxed">{message.text}</p>
                         </div>
+                        {/* Book Session handoff */}
+                        {message.sender === 'ai' && message.text.toLowerCase().includes('book a therapy session') && (
+                          <Link to="/booking">
+                            <Button size="sm" className="bg-gradient-to-r from-indigo-600 to-purple-600 mt-2">Book Session</Button>
+                          </Link>
+                        )}
+                        {/* Suggestions if any */}
                         {message.suggestions && (
                           <div className="flex flex-wrap gap-2 mt-2">
                             {message.suggestions.map((suggestion, index) => (
@@ -166,7 +144,7 @@ const Chat = () => {
                                 key={index}
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleSuggestionClick(suggestion)}
+                                onClick={() => handleSendMessage(suggestion)}
                                 className="text-xs bg-white/50 hover:bg-indigo-50 border-indigo-200"
                               >
                                 {suggestion}

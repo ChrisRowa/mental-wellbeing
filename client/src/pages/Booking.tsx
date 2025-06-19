@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
-import axios from "axios";
+import { Link, useLocation } from "react-router-dom";
+import axios from "@/lib/axios";
 
 const Booking = () => {
   const [loading, setLoading] = useState(true);
@@ -12,6 +12,8 @@ const Booking = () => {
   const [selectedTherapist, setSelectedTherapist] = useState<string>("");
   const [slots, setSlots] = useState<string[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<string>("");
+  const [therapistSlots, setTherapistSlots] = useState<any>({});
+  const location = useLocation();
 
   useEffect(() => {
     const fetchTherapists = async () => {
@@ -19,6 +21,12 @@ const Booking = () => {
       try {
         const res = await axios.get("/api/therapists");
         setTherapists(res.data);
+        // Build a map of therapistId -> availability (if available)
+        const slotsMap: any = {};
+        res.data.forEach((t: any) => {
+          slotsMap[t._id || t.id] = t.availability || [];
+        });
+        setTherapistSlots(slotsMap);
       } catch (err) {}
       setLoading(false);
     };
@@ -26,8 +34,23 @@ const Booking = () => {
   }, []);
 
   useEffect(() => {
+    if (location.state && location.state.therapistId) {
+      setSelectedTherapist(location.state.therapistId);
+    }
+  }, [location.state]);
+
+  useEffect(() => {
+    if (!selectedTherapist) {
+      setSlots([]);
+      return;
+    }
+    // If we already have slots in therapistSlots, use them
+    if (therapistSlots[selectedTherapist]) {
+      setSlots(therapistSlots[selectedTherapist]);
+      return;
+    }
+    // Otherwise, fetch from API
     const fetchSlots = async () => {
-      if (!selectedTherapist) return setSlots([]);
       setLoading(true);
       try {
         const res = await axios.get(`/api/therapists/${selectedTherapist}`);
@@ -36,15 +59,24 @@ const Booking = () => {
       setLoading(false);
     };
     fetchSlots();
-  }, [selectedTherapist]);
+  }, [selectedTherapist, therapistSlots]);
 
   const handleBook = async () => {
     try {
-      await axios.post("/api/appointments/book", {
-        therapistId: selectedTherapist,
-        date: selectedDate,
-        time: selectedSlot
-      });
+      const token = localStorage.getItem('token');
+      await axios.post(
+        "/api/appointments/book",
+        {
+          therapistId: selectedTherapist,
+          date: selectedDate,
+          time: selectedSlot
+        },
+        {
+          headers: {
+            Authorization: token ? `Bearer ${token}` : undefined
+          }
+        }
+      );
       alert("Session booked!");
     } catch (err: any) {
       alert(err.response?.data?.message || "Booking failed");
@@ -85,7 +117,7 @@ const Booking = () => {
               <label className="block mb-2 font-medium">Select Date</label>
               <input type="date" className="w-full border rounded p-2" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} />
             </div>
-            {slots.length > 0 && (
+            {slots.length > 0 ? (
               <div className="mb-4">
                 <label className="block mb-2 font-medium">Select Time Slot</label>
                 <select className="w-full border rounded p-2" value={selectedSlot} onChange={e => setSelectedSlot(e.target.value)}>
@@ -93,6 +125,8 @@ const Booking = () => {
                   {slots.map((slot, i) => <option key={i} value={slot}>{slot}</option>)}
                 </select>
               </div>
+            ) : selectedTherapist && (
+              <div className="mb-4 text-red-500">No available slots for this therapist.</div>
             )}
             <Button className="w-full" onClick={handleBook} disabled={!selectedTherapist || !selectedDate || !selectedSlot}>Book Session</Button>
           </CardContent>

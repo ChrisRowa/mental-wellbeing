@@ -1,8 +1,9 @@
-import axios from "axios";
+import axios from "@/lib/axios";
 import { useEffect, useState } from "react";
 import { useUser } from "@/context/UserContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Users, MessageCircle, Calendar, BarChart2, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -13,26 +14,51 @@ const AdminDashboard = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [therapists, setTherapists] = useState<any[]>([]);
   const [reports, setReports] = useState<any[]>([]);
+  const [chatbotUsage, setChatbotUsage] = useState<any[]>([]);
+  const [aiContent, setAIContent] = useState<string>("");
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [statsRes, usersRes, therapistsRes, reportsRes] = await Promise.all([
+        const [statsRes, usersRes, therapistsRes, reportsRes, chatbotRes] = await Promise.all([
           axios.get("/api/admin/reports"),
           axios.get("/api/admin/users"),
           axios.get("/api/admin/therapists"),
-          axios.get("/api/admin/reports")
+          axios.get("/api/admin/reports"),
+          axios.get("/api/admin/chatbot")
         ]);
         setStats(statsRes.data);
-        setUsers(usersRes.data);
-        setTherapists(therapistsRes.data);
-        setReports(reportsRes.data);
+        setUsers(usersRes.data.users || []);
+        setTherapists(therapistsRes.data.therapists || []);
+        setReports(reportsRes.data.reports || []);
+        setChatbotUsage(chatbotRes.data.usage || []);
       } catch (err) {}
       setLoading(false);
     };
     fetchData();
   }, []);
+
+  const handleAddUser = async () => {
+    await axios.post("/api/admin/users", { name: "New User" });
+    alert("User added!");
+  };
+  const handleDeleteUser = async (id: string) => {
+    await axios.delete(`/api/admin/users/${id}`);
+    setUsers(users.filter(u => u._id !== id));
+  };
+  const handleAddTherapist = async () => {
+    await axios.post("/api/admin/therapists", { name: "New Therapist" });
+    alert("Therapist added!");
+  };
+  const handleDeleteTherapist = async (id: string) => {
+    await axios.delete(`/api/admin/therapists/${id}`);
+    setTherapists(therapists.filter(t => t._id !== id));
+  };
+  const handleAIContentUpdate = async () => {
+    await axios.post("/api/admin/ai-content", { content: aiContent });
+    alert("AI content updated!");
+  };
 
   if (loading) return <div>Loading...</div>;
 
@@ -56,38 +82,54 @@ const AdminDashboard = () => {
         <div className="grid md:grid-cols-2 gap-6 mb-8">
           <Card>
             <CardHeader>
-              <CardTitle>Manage Users</CardTitle>
+              <CardTitle>Users</CardTitle>
             </CardHeader>
             <CardContent>
-              <Button variant="outline">View All Users</Button>
-              {/* TODO: Implement user management */}
+              <Button onClick={handleAddUser}>Add User</Button>
+              <ul>
+                {users.map(u => (
+                  <li key={u._id} className="flex justify-between items-center my-2">
+                    <span>{u.name}</span>
+                    <Button size="sm" variant="destructive" onClick={() => handleDeleteUser(u._id)}>Delete</Button>
+                  </li>
+                ))}
+              </ul>
             </CardContent>
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle>Manage Therapists</CardTitle>
+              <CardTitle>Therapists</CardTitle>
             </CardHeader>
             <CardContent>
-              <Button variant="outline">View All Therapists</Button>
-              {/* TODO: Implement therapist management */}
+              <Button onClick={handleAddTherapist}>Add Therapist</Button>
+              <ul>
+                {therapists.map(t => (
+                  <li key={t._id} className="flex justify-between items-center my-2">
+                    <span>{t.name}</span>
+                    <Button size="sm" variant="destructive" onClick={() => handleDeleteTherapist(t._id)}>Delete</Button>
+                  </li>
+                ))}
+              </ul>
             </CardContent>
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle>Reports & Analytics</CardTitle>
+              <CardTitle>Reports</CardTitle>
             </CardHeader>
             <CardContent>
               <Button variant="outline">View Reports</Button>
-              {/* TODO: Implement reports and analytics */}
             </CardContent>
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle>Chatbot Monitoring</CardTitle>
+              <CardTitle>Chatbot Usage</CardTitle>
             </CardHeader>
             <CardContent>
-              <Button variant="outline">Monitor Chatbot</Button>
-              {/* TODO: Implement chatbot usage monitoring */}
+              <ul>
+                {chatbotUsage.map(u => (
+                  <li key={u._id}>{u.detail}</li>
+                ))}
+              </ul>
             </CardContent>
           </Card>
           <Card className="md:col-span-2">
@@ -95,8 +137,8 @@ const AdminDashboard = () => {
               <CardTitle>AI Content & Resources</CardTitle>
             </CardHeader>
             <CardContent>
-              <Button variant="outline">Control AI Content</Button>
-              {/* TODO: Implement AI content/resource management */}
+              <Input value={aiContent} onChange={e => setAIContent(e.target.value)} placeholder="Update AI content/resources" className="mb-2" />
+              <Button onClick={handleAIContentUpdate}>Update AI Content</Button>
             </CardContent>
           </Card>
         </div>

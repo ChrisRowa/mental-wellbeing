@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios from "@/lib/axios";
 import { useEffect, useState } from "react";
 import { useUser } from "@/context/UserContext";
 import { Button } from "@/components/ui/button";
@@ -14,18 +14,21 @@ const Dashboard = () => {
   const [profile, setProfile] = useState<any>(null);
   const [upcomingAppointments, setUpcomingAppointments] = useState<any[]>([]);
   const [recentActivities, setRecentActivities] = useState<any[]>([]);
+  const [reminders, setReminders] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [profileRes, bookingsRes] = await Promise.all([
+        const [profileRes, bookingsRes, remindersRes] = await Promise.all([
           axios.get("/api/users/profile"),
-          axios.get("/api/users/bookings")
+          axios.get("/api/users/bookings"),
+          axios.get("/api/appointments/reminders")
         ]);
         setProfile(profileRes.data);
         setUpcomingAppointments(bookingsRes.data.appointments || []);
         setRecentActivities(bookingsRes.data.activities || []);
+        setReminders(remindersRes.data || []);
       } catch (err) {
         // handle error
       }
@@ -104,13 +107,15 @@ const Dashboard = () => {
             </Card>
           </Link>
 
-          <Card className="border-0 shadow-lg bg-gradient-to-r from-orange-500 to-red-500 text-white hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer">
-            <CardContent className="p-6 text-center">
-              <Heart className="h-8 w-8 mx-auto mb-2" />
-              <h3 className="font-semibold">Wellness</h3>
-              <p className="text-sm opacity-90">Track progress</p>
-            </CardContent>
-          </Card>
+          <Link to="/wellness">
+            <Card className="border-0 shadow-lg bg-gradient-to-r from-orange-500 to-red-500 text-white hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer">
+              <CardContent className="p-6 text-center">
+                <Heart className="h-8 w-8 mx-auto mb-2" />
+                <h3 className="font-semibold">Wellness</h3>
+                <p className="text-sm opacity-90">Track progress</p>
+              </CardContent>
+            </Card>
+          </Link>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
@@ -156,6 +161,21 @@ const Dashboard = () => {
 
           {/* Sidebar */}
           <div className="space-y-6">
+            {/* Reminders */}
+            {reminders.length > 0 && (
+              <Card className="border-0 shadow-lg bg-gradient-to-r from-yellow-400 to-orange-500 text-white">
+                <CardContent className="p-6">
+                  <div className="font-bold mb-2">Reminders</div>
+                  {reminders.map((reminder) => (
+                    <div key={reminder._id} className="mb-2">
+                      <div className="font-semibold">{reminder.therapistName || 'Therapist'}</div>
+                      <div className="text-sm">{new Date(reminder.reminderTime).toLocaleString()}</div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
             {/* Wellness Streak */}
             <Card className="border-0 shadow-lg bg-gradient-to-r from-green-500 to-emerald-500 text-white">
               <CardContent className="p-6 text-center">

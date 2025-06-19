@@ -7,6 +7,8 @@ const AppointmentSchema = new mongoose.Schema({
   time: { type: String, required: true },
   status: { type: String, enum: ['pending', 'accepted', 'rejected', 'completed'], default: 'pending' },
   notes: { type: String },
+  reminderSent: { type: Boolean, default: false },
+  reminderTime: { type: Date },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Appointment', AppointmentSchema); 

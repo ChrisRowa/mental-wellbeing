@@ -7,7 +7,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Brain, Eye, EyeOff, User, Users } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
+import axios from "@/lib/axios";
 import { useUser } from "@/context/UserContext";
 
 const Signup = () => {
@@ -40,6 +40,9 @@ const Signup = () => {
       });
       const { name, email: userEmail, role } = res.data.user;
       setUser({ name, email: userEmail, role });
+      if (res.data.token) {
+        localStorage.setItem('token', res.data.token);
+      }
       if (role === "therapist") navigate("/therapist-dashboard");
       else if (role === "admin") navigate("/admin-dashboard");
       else navigate("/dashboard");

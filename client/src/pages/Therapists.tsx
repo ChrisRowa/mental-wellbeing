@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,10 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Brain, Search, Star, MapPin, Clock, Calendar, ArrowLeft, Filter } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import axios from "@/lib/axios";
 
 interface Therapist {
-  id: number;
+  id?: number;
+  _id?: string;
   name: string;
   specialization: string[];
   rating: number;
@@ -27,6 +28,7 @@ const Therapists = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSpecialization, setSelectedSpecialization] = useState("all");
   const [selectedLocation, setSelectedLocation] = useState("all");
+  const navigate = useNavigate();
 
   const therapists: Therapist[] = [
     {
@@ -236,7 +238,7 @@ const Therapists = () => {
                         <Button variant="outline" size="sm" className="hover:bg-indigo-50">
                           View Profile
                         </Button>
-                        <Button size="sm" className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700">
+                        <Button size="sm" className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700" onClick={() => navigate('/booking', { state: { therapistId: therapist._id ? therapist._id : therapist.id, therapistName: therapist.name } })}>
                           <Calendar className="h-4 w-4 mr-1" />
                           Book Session
                         </Button>

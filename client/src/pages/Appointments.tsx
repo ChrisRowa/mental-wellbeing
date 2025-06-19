@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import axios from "@/lib/axios";
 
 const Appointments = () => {
   const [appointments, setAppointments] = useState<any[]>([]);
